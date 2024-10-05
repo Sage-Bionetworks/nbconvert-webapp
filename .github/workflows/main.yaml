@@ -31,7 +31,7 @@ jobs:
 #
       - name: build-dev
         if: ${{ github.ref_name == 'develop' }}
-        uses: "./github/workflows/build.yaml"
+        uses: "./.github/workflows/build.yaml"
         with:
           context: dev
           role_to_assume: arn:aws:iam::449435941126:role/sagebase-github-oidc-nbconvert-deploy
