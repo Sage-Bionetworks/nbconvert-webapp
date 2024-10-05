@@ -1,0 +1,44 @@
+name: main
+
+on:
+  pull_request:
+    branches: [ '*' ]
+  push:
+    branches: [ 'main', 'develop' ]
+
+concurrency: ci-${{ github.ref }}
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+#      - name: setup-python
+#        uses: actions/setup-python@v4
+#        with:
+#          python-version: '3.11'
+#
+#      - name: setup-node
+#        uses: actions/setup-node@v4
+#        with:
+#          node-version: '20'
+#
+#      - name: setup-buildx
+#        uses: docker/setup-buildx-action@v3
+#
+      - name: build-dev
+        if: ${{ github.ref_name == 'develop' }}
+        uses: "./github/workflows/build.yaml"
+        with:
+          context: dev
+          role_to_assume: arn:aws:iam::449435941126:role/sagebase-github-oidc-nbconvert-deploy
+
+      - name: build-prod
+        if: ${{ github.ref_name == 'main' }}
+        uses: "./.github/workflows/build.yaml"
+        with:
+          context: prod
+          role_to_assume: prod-role

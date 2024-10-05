@@ -6,7 +6,7 @@ Note, I used [python-lambda](https://github.com/nficano/python-lambda) as a star
 
 ## How to create the deployment package
 Note that a prebuilt package is included in the dist directory.  To rebuild...
-As described in the [AWS Lambda "Creating a Deployment Package (Python)" doc](http://docs.aws.amazon.com/lambda/latest/dg/lambda-python-how-to-create-deployment-package.html), use the Virtualenv tool. 
+As described in the [AWS Lambda "Creating a Deployment Package (Python)" doc](http://docs.aws.amazon.com/lambda/latest/dg/lambda-python-how-to-create-deployment-package.html), use the Virtualenv tool.
 Install all dependencies within this environment
 ```
 pip install requests
