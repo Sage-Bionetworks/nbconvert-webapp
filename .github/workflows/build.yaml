@@ -31,6 +31,6 @@ jobs:
       - name: cdk-synth
         uses: youyo/aws-cdk-github-actions@v2
         with:
-          cdk_subcommand: synth
+          cdk_subcommand: deploy
           cdk_args: '--require-approval never --context fct_stack=${{ inputs.fct_stack }} --progress events --debug'
           actions_comment: false
