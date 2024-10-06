@@ -13,6 +13,8 @@ on:
 jobs:
   build-push:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
 
     steps:
       - name: checkout
