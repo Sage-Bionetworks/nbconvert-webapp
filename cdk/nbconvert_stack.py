@@ -10,17 +10,19 @@ class NBConvertLambdaCdkStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        self.build_lambda_func()
+        fct_stack = self.node.try_get_context('fct_stack') or 'dev'
+
+        self.build_lambda_func(fct_stack=fct_stack)
         fct_url = self.prediction_lambda.add_function_url(
             auth_type=_lambda.FunctionUrlAuthType.NONE
         )
 
-    def build_lambda_func(self):
+    def build_lambda_func(self, fct_stack):
         self.prediction_lambda = _lambda.DockerImageFunction(
             scope=self,
-            id="nbconvertLambda",
+            id=f"{fct_stack}-nbconvert-lambda",
             # Function name on AWS
-            function_name="nbconvertLambda",
+            function_name=f"{fct_stack}-nbconvert-lambda",
             # Use aws_cdk.aws_lambda.DockerImageCode.from_image_asset to build
             # a docker image on deployment
             code=_lambda.DockerImageCode.from_image_asset(

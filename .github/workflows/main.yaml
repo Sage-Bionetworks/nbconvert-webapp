@@ -24,12 +24,13 @@ jobs:
     if: ${{ github.ref_name == 'develop' }}
     uses: ./.github/workflows/build.yaml
     with:
-      context: dev
+      fct_stack: dev
       role_to_assume: arn:aws:iam::449435941126:role/sagebase-github-oidc-nbconvert-deploy
 
   build-prod:
-    if: ${{ github.ref_name == 'main' }}
+    if: ${{ github.ref_name == 'master' }}
     uses: ./.github/workflows/build.yaml
     with:
-      context: prod
-      role_to_assume: prod-role
+      fct_stack: prod
+# Always deploy to dev for now...
+      role_to_assume: arn:aws:iam::449435941126:role/sagebase-github-oidc-nbconvert-deploy
