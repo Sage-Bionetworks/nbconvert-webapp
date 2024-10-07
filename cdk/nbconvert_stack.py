@@ -1,4 +1,5 @@
 from aws_cdk import (
+    Duration,
     Stack,
     aws_lambda as _lambda
 )
@@ -29,6 +30,7 @@ class NBConvertLambdaCdkStack(Stack):
                 # Directory relative to where you execute cdk deploy
                 # contains a Dockerfile with build instructions
                 directory="./nbconvert",
-                platform=Platform.LINUX_AMD64
+                platform=Platform.LINUX_AMD64,
+                timeout=Duration.seconds(60)
             )
         )
