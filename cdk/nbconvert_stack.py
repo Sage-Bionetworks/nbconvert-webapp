@@ -32,5 +32,5 @@ class NBConvertLambdaCdkStack(Stack):
                 directory="./nbconvert",
                 platform=Platform.LINUX_AMD64
             ),
-            timeout=Duration.seconds(60)
+            timeout=Duration.seconds(120)
         )
