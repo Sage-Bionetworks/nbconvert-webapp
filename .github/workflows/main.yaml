@@ -25,7 +25,7 @@ jobs:
     uses: ./.github/workflows/build.yaml
     with:
       fct_stack: dev
-      role_to_assume: arn:aws:iam::449435941126:role/sagebase-github-oidc-nbconvert-deploy
+      role_to_assume: arn:aws:iam::449435941126:role/sagebase-github-oidc-nbconvert-deploy-cdk-based
 
   build-prod:
     if: ${{ github.ref_name == 'master' }}
@@ -33,4 +33,4 @@ jobs:
     with:
       fct_stack: prod
 # Always deploy to dev for now...
-      role_to_assume: arn:aws:iam::449435941126:role/sagebase-github-oidc-nbconvert-deploy
+      role_to_assume: arn:aws:iam::449435941126:role/sagebase-github-oidc-nbconvert-deploy-cdk-based
