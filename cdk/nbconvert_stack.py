@@ -13,13 +13,17 @@ class NBConvertLambdaCdkStack(Stack):
 
         fct_stack = self.node.try_get_context('fct_stack') or 'dev'
 
-        self.build_lambda_func(fct_stack=fct_stack)
-        fct_url = self.prediction_lambda.add_function_url(
+        self.lambda_fct = self.build_lambda_func(fct_stack=fct_stack)
+
+        # function URL with public access
+        # Note: might want to specify _lambda.FunctionUrlAuthType.AWS_IAM
+        # or use VPC endpoint to keep private
+        self.fct_url = self.lambda_fct.add_function_url(
             auth_type=_lambda.FunctionUrlAuthType.NONE
         )
 
-    def build_lambda_func(self, fct_stack):
-        self.prediction_lambda = _lambda.DockerImageFunction(
+    def build_lambda_func(self, fct_stack:str ) -> _lambda.DockerImageFunction:
+        return _lambda.DockerImageFunction(
             scope=self,
             id=f"{fct_stack}-nbconvert-lambda",
             # Function name on AWS
@@ -30,7 +34,8 @@ class NBConvertLambdaCdkStack(Stack):
                 # Directory relative to where you execute cdk deploy
                 # contains a Dockerfile with build instructions
                 directory="./nbconvert",
-                platform=Platform.LINUX_AMD64
+                architecture=_lambda.Architecture.ARM_64,
+                platform=Platform.LINUX_ARM64
             ),
             timeout=Duration.seconds(120)
         )
