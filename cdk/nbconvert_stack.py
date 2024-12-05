@@ -4,7 +4,7 @@ from aws_cdk import (
     aws_lambda as _lambda
 )
 from constructs import Construct
-from aws_cdk.aws_ecr_assets import Platform
+
 
 class NBConvertLambdaCdkStack(Stack):
 
@@ -33,8 +33,7 @@ class NBConvertLambdaCdkStack(Stack):
             code=_lambda.DockerImageCode.from_image_asset(
                 # Directory relative to where you execute cdk deploy
                 # contains a Dockerfile with build instructions
-                directory="./nbconvert",
-                architecture=_lambda.Architecture.X86_64
+                directory="./nbconvert"
             ),
             timeout=Duration.seconds(120)
         )
