@@ -34,7 +34,7 @@ class NBConvertLambdaCdkStack(Stack):
                 # Directory relative to where you execute cdk deploy
                 # contains a Dockerfile with build instructions
                 directory="./nbconvert",
-                platform=Platform.LINUX_ARM64
+                architecture=_lambda.Architecture.X86_64
             ),
             timeout=Duration.seconds(120)
         )
