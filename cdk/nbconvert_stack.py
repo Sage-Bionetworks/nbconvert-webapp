@@ -1,7 +1,9 @@
 from aws_cdk import (
     Duration,
     Stack,
-    aws_lambda as _lambda
+    aws_lambda as _lambda,
+    aws_certificatemanager as acm,
+    aws_apigateway as apigw
 )
 from constructs import Construct
 
@@ -12,15 +14,13 @@ class NBConvertLambdaCdkStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         fct_stack = self.node.try_get_context('fct_stack') or 'dev'
+        domain_prefix = "api2-dev." if fct_stack == 'dev' else "api2."
 
         self.lambda_fct = self.build_lambda_func(fct_stack=fct_stack)
-
-        # function URL with public access
-        # Note: might want to specify _lambda.FunctionUrlAuthType.AWS_IAM
-        # or use VPC endpoint to keep private
-        self.fct_url = self.lambda_fct.add_function_url(
-            auth_type=_lambda.FunctionUrlAuthType.NONE
-        )
+        self.setup_api_gateway = self.setup_api_gateway(lambda_function=self.lambda_fct,
+                                                        domain_name=f"{domain_prefix}synapse.org",
+                                                        cert_arn="arn:aws:acm:us-east-1:449435941126:certificate/7d391bab-0663-4438-a418-2422b051adc7",
+                                                        base_path="nbconvert")
 
     def build_lambda_func(self, fct_stack:str ) -> _lambda.DockerImageFunction:
         return _lambda.DockerImageFunction(
@@ -37,3 +37,35 @@ class NBConvertLambdaCdkStack(Stack):
             ),
             timeout=Duration.seconds(120)
         )
+
+    def setup_api_gateway(
+        self,
+        lambda_function: _lambda.DockerImageFunction,
+        domain_name: str,
+        cert_arn: str,
+        base_path: str) -> apigw.RestApi:
+        certificate = acm.Certificate.from_certificate_arn(
+            self,
+            "CustomDomainCert",
+            cert_arn
+        )
+
+        domain_name_opts = apigw.DomainNameOptions(
+            domain_name=domain_name,
+            certificate=certificate,
+        )
+
+        # Create the API Gateway
+        api = apigw.RestApi(
+            self,
+            "NBConvertApiGateway",
+            rest_api_name="NBConvertAPI",
+            domain_name=domain_name_opts,
+        )
+
+        lambda_integration = apigw.LambdaIntegration(lambda_function)
+
+        resource = api.root.add_resource(base_path)
+        resource.add_method("POST", lambda_integration)
+
+        return api
