@@ -55,7 +55,6 @@ class NBConvertLambdaCdkStack(Stack):
             certificate=certificate,
         )
 
-        # Create the API Gateway
         api = apigw.RestApi(
             self,
             "NBConvertApiGateway",
