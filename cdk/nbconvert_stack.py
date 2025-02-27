@@ -3,23 +3,34 @@ from aws_cdk import (
     Stack,
     aws_lambda as _lambda,
     aws_certificatemanager as acm,
-    aws_apigateway as apigw
+    aws_apigateway as apigw,
+    aws_iam as iam,
+    CfnOutput
 )
 from constructs import Construct
 
 
 class NBConvertLambdaCdkStack(Stack):
 
+
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        DEV_CERT_ARN = "arn:aws:acm:us-east-1:449435941126:certificate/7d391bab-0663-4438-a418-2422b051adc7"
+        PROD_CERT_ARN = "arn:aws:acm:us-east-1:325565585839:certificate/7c42c355-3d69-4537-a5e6-428212db646f"
+
         fct_stack = self.node.try_get_context('fct_stack') or 'dev'
-        domain_prefix = "api2-dev." if fct_stack == 'dev' else "api2."
+        domain_prefix = f"api-{fct_stack}."
+
+        if fct_stack == 'prod':
+            cert_arn = PROD_CERT_ARN
+        else:
+            cert_arn = DEV_CERT_ARN
 
         self.lambda_fct = self.build_lambda_func(fct_stack=fct_stack)
         self.setup_api_gateway = self.setup_api_gateway(lambda_function=self.lambda_fct,
                                                         domain_name=f"{domain_prefix}synapse.org",
-                                                        cert_arn="arn:aws:acm:us-east-1:449435941126:certificate/7d391bab-0663-4438-a418-2422b051adc7",
+                                                        cert_arn=cert_arn,
                                                         base_path="nbconvert")
 
     def build_lambda_func(self, fct_stack:str ) -> _lambda.DockerImageFunction:
@@ -55,16 +66,32 @@ class NBConvertLambdaCdkStack(Stack):
             certificate=certificate,
         )
 
+        resource_policy = iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            principals=[iam.AnyPrincipal()],  # Public Access
+            actions=["execute-api:Invoke"],
+            resources=["*"]  # Allow all stages/methods
+        )
+
         api = apigw.RestApi(
             self,
             "NBConvertApiGateway",
             rest_api_name="NBConvertAPI",
             domain_name=domain_name_opts,
+            policy=iam.PolicyDocument(statements=[resource_policy]),
         )
 
         lambda_integration = apigw.LambdaIntegration(lambda_function)
 
         resource = api.root.add_resource(base_path)
-        resource.add_method("POST", lambda_integration)
+        resource.add_method("POST", lambda_integration, authorization_type=apigw.AuthorizationType.NONE)
+
+        lambda_function.add_permission(
+            "ApiGatewayInvoke",
+            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
+            source_arn=f"arn:aws:execute-api:{self.region}:{self.account}:{api.rest_api_id}/*/POST/{base_path}"
+        )
+
+        CfnOutput(self, "ApiGatewayURL", value=api.url)
 
         return api
