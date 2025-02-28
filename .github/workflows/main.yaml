@@ -32,5 +32,4 @@ jobs:
     uses: ./.github/workflows/build.yaml
     with:
       fct_stack: prod
-# Always deploy to dev for now...
-      role_to_assume: arn:aws:iam::449435941126:role/sagebase-github-oidc-sage-bionetworks-synapse
+      role_to_assume: arn:aws:iam::325565585839:role/sagebase-github-oidc-sage-bionetworks-synapse
