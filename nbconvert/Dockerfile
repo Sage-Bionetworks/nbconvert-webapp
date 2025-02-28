@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/python:3.11
+FROM --platform=linux/amd64 public.ecr.aws/lambda/python:3.11
 
 # Install zmq dependencies
 RUN yum install -y gcc libzmq3-dev
