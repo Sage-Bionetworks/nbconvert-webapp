@@ -84,7 +84,7 @@ class NBConvertLambdaCdkStack(Stack):
         lambda_integration = apigw.LambdaIntegration(lambda_function)
 
         resource = api.root.add_resource(base_path)
-        resource.add_method("POST", lambda_integration, authorization_type=apigw.AuthorizationType.NONE)
+        resource.add_method("GET", lambda_integration, authorization_type=apigw.AuthorizationType.NONE)
 
         lambda_function.add_permission(
             "ApiGatewayInvoke",
