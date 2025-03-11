@@ -8,5 +8,3 @@ Note, I used [python-lambda](https://github.com/nficano/python-lambda) as a star
 
 The deployment uses the AWS CDK to create the function (packaged as
 a docker container) and associated API Gateway.
-
-
