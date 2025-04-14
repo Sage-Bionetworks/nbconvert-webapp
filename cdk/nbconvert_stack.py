@@ -89,7 +89,7 @@ class NBConvertLambdaCdkStack(Stack):
         lambda_function.add_permission(
             "ApiGatewayInvoke",
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"arn:aws:execute-api:{self.region}:{self.account}:{api.rest_api_id}/*/POST/{base_path}"
+            source_arn=self.format_arn(service="execute-api", resource=api.rest_api_id, resource_name=f"*/*/{base_path}")
         )
 
         CfnOutput(self, "ApiGatewayURL", value=api.url)
