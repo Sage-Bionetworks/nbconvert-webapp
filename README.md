@@ -10,6 +10,5 @@ The deployment uses the AWS CDK to create the function (packaged as
 a docker container) and associated API Gateway.
 
 To deploy:
-- the API endpoint is 'api-[dev|prod].synapse.org', update the endpoints and certificate ARNs in cdk/nbconvert_stack.py as needed 
+- the API endpoint is 'api-[dev|prod].synapse.org', update the endpoints and certificate ARNs in cdk/nbconvert_stack.py as needed
 - cdk deploy --region us-east-1 --profile <profile_name> --context fct_stack=[dev|prod]
-
