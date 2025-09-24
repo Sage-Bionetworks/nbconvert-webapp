@@ -3,7 +3,8 @@ from aws_cdk import (
     Stack,
     aws_lambda as _lambda,
     aws_certificatemanager as acm,
-    aws_apigateway as apigw,
+    aws_apigatewayv2 as apigw2,
+    aws_apigatewayv2_integrations as apigw2_integrations,
     aws_iam as iam,
     CfnOutput
 )
@@ -54,42 +55,55 @@ class NBConvertLambdaCdkStack(Stack):
         lambda_function: _lambda.DockerImageFunction,
         domain_name: str,
         cert_arn: str,
-        base_path: str) -> apigw.RestApi:
+        base_path: str) -> apigw2.HttpApi:
+
         certificate = acm.Certificate.from_certificate_arn(
             self,
-            "CustomDomainCert",
-            cert_arn
+            id="CustomDomainCert",
+            certificate_arn=cert_arn
         )
 
-        domain_name_opts = apigw.DomainNameOptions(
+        api = apigw2.HttpApi(
+            self,
+            id="NBConvertApiGateway",
+            api_name="NBConvertAPI",
+            cors_preflight={
+                "allow_origins": ["*"],
+                "allow_methods": [apigw2.CorsHttpMethod.GET]
+            }
+        )
+
+        lambda_integration = apigw2_integrations.HttpLambdaIntegration(
+            id="LambdaIntegration",
+            handler=lambda_function
+        )
+
+        api.add_routes(
+            path=f"/{base_path}",
+            methods=[apigw2.HttpMethod.GET],
+            integration=lambda_integration
+        )
+
+        domain_name = apigw2.DomainName(
+            self,
+            id="CustomDomain",
             domain_name=domain_name,
             certificate=certificate,
         )
 
-        resource_policy = iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            principals=[iam.AnyPrincipal()],  # Public Access
-            actions=["execute-api:Invoke"],
-            resources=["*"]  # Allow all stages/methods
+        api.add_stage(
+            id="default",
+            auto_deploy=True,
+            stage_name="$default"
         )
 
-        api = apigw.RestApi(
+        apigw2.ApiMapping(
             self,
-            "NBConvertApiGateway",
-            rest_api_name="NBConvertAPI",
-            domain_name=domain_name_opts,
-            policy=iam.PolicyDocument(statements=[resource_policy]),
-        )
-
-        lambda_integration = apigw.LambdaIntegration(lambda_function)
-
-        resource = api.root.add_resource(base_path)
-        resource.add_method("GET", lambda_integration, authorization_type=apigw.AuthorizationType.NONE)
-
-        lambda_function.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=self.format_arn(service="execute-api", resource=api.rest_api_id, resource_name=f"*/*/{base_path}")
+            id="ApiMapping",
+            api=api,
+            domain_name=domain_name,
+            stage=api.default_stage,
+            api_mapping_key=base_path
         )
 
         CfnOutput(self, "ApiGatewayURL", value=api.url)
