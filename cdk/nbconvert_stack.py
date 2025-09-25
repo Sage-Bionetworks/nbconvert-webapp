@@ -91,19 +91,12 @@ class NBConvertLambdaCdkStack(Stack):
             certificate=certificate,
         )
 
-        api.add_stage(
-            id="default",
-            auto_deploy=True,
-            stage_name="$default"
-        )
-
         apigw2.ApiMapping(
             self,
             id="ApiMapping",
             api=api,
             domain_name=domain_name,
-            stage=api.default_stage,
-            api_mapping_key=base_path
+            stage=api.default_stage
         )
 
         CfnOutput(self, "ApiGatewayURL", value=api.url)
