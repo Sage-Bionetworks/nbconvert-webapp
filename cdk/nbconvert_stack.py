@@ -5,6 +5,7 @@ from aws_cdk import (
     aws_certificatemanager as acm,
     aws_apigatewayv2 as apigw2,
     aws_apigatewayv2_integrations as apigw2_integrations,
+    aws_apigatewayv2_authorizers as apigw2_authorizers,
     aws_iam as iam,
     CfnOutput
 )
@@ -73,6 +74,12 @@ class NBConvertLambdaCdkStack(Stack):
             }
         )
 
+        jwt_auth = apigw2_authorizers.HttpJwtAuthorizer(
+            id="NBConvertJwtAuthorizer",
+            jwt_issuer=	"https://repo-prod.prod.sagebase.org/auth/v1",
+            jwt_audience=["0"]
+        )
+
         lambda_integration = apigw2_integrations.HttpLambdaIntegration(
             id="LambdaIntegration",
             handler=lambda_function
@@ -81,7 +88,8 @@ class NBConvertLambdaCdkStack(Stack):
         api.add_routes(
             path=f"/{base_path}",
             methods=[apigw2.HttpMethod.GET],
-            integration=lambda_integration
+            integration=lambda_integration,
+            authorizer=jwt_auth
         )
 
         domain_name = apigw2.DomainName(
