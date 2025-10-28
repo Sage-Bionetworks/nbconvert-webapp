@@ -30,7 +30,8 @@ class NBConvertLambdaCdkStack(Stack):
             cert_arn = DEV_CERT_ARN
 
         self.lambda_fct = self.build_lambda_func(fct_stack=fct_stack)
-        self.setup_api_gateway = self.setup_api_gateway(lambda_function=self.lambda_fct,
+        self.setup_api_gateway = self.setup_api_gateway(fct_stack=fct_stack,
+                                                        lambda_function=self.lambda_fct,
                                                         domain_name=f"{domain_prefix}synapse.org",
                                                         cert_arn=cert_arn,
                                                         base_path="nbconvert")
@@ -53,6 +54,7 @@ class NBConvertLambdaCdkStack(Stack):
 
     def setup_api_gateway(
         self,
+        fct_stack: str,
         lambda_function: _lambda.DockerImageFunction,
         domain_name: str,
         cert_arn: str,
@@ -76,7 +78,7 @@ class NBConvertLambdaCdkStack(Stack):
 
         jwt_auth = apigw2_authorizers.HttpJwtAuthorizer(
             id="NBConvertJwtAuthorizer",
-            jwt_issuer=	"https://repo-prod.prod.sagebase.org/auth/v1",
+            jwt_issuer=	f"https://repo-prod.{fct_stack}.sagebase.org/auth/v1",
             jwt_audience=["0"]
         )
 
