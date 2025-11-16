@@ -64,7 +64,7 @@ class NBConvertLambdaCdkStack(Stack):
 
         allowed_origins = ["*"]
         if fct_stack == 'prod':
-          allowed_origins = ["https://www.synapse.org", "https://synapse.org"]
+            allowed_origins = ["https://www.synapse.org", "https://synapse.org"]
 
         api = apigw2.HttpApi(
             self,
