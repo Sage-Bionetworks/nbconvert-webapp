@@ -11,6 +11,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+SYNAPSE_OAUTH_CLIENT_ID = "0"
 
 class NBConvertLambdaCdkStack(Stack):
 
@@ -40,13 +41,8 @@ class NBConvertLambdaCdkStack(Stack):
         return _lambda.DockerImageFunction(
             scope=self,
             id=f"{fct_stack}-nbconvert-lambda",
-            # Function name on AWS
             function_name=f"{fct_stack}-nbconvert-lambda",
-            # Use aws_cdk.aws_lambda.DockerImageCode.from_image_asset to build
-            # a docker image on deployment
             code=_lambda.DockerImageCode.from_image_asset(
-                # Directory relative to where you execute cdk deploy
-                # contains a Dockerfile with build instructions
                 directory="./nbconvert"
             ),
             timeout=Duration.seconds(120)
@@ -66,20 +62,25 @@ class NBConvertLambdaCdkStack(Stack):
             certificate_arn=cert_arn
         )
 
+        allowed_origins = ["*"]
+        if fct_stack == 'prod':
+          allowed_origins = ["https://www.synapse.org", "https://synapse.org"]
+
         api = apigw2.HttpApi(
             self,
             id="NBConvertApiGateway",
             api_name="NBConvertAPI",
             cors_preflight={
-                "allow_origins": ["*"],
-                "allow_methods": [apigw2.CorsHttpMethod.GET]
+                "allow_origins": allowed_origins,
+                "allow_methods": [apigw2.CorsHttpMethod.GET],
+                "allow_headers": ["*"]
             }
         )
 
         jwt_auth = apigw2_authorizers.HttpJwtAuthorizer(
             id="NBConvertJwtAuthorizer",
-            jwt_issuer=	f"https://repo-prod.{fct_stack}.sagebase.org/auth/v1",
-            jwt_audience=["0"]
+            jwt_issuer=f"https://repo-prod.{fct_stack}.sagebase.org/auth/v1",
+            jwt_audience=[SYNAPSE_OAUTH_CLIENT_ID],
         )
 
         lambda_integration = apigw2_integrations.HttpLambdaIntegration(
