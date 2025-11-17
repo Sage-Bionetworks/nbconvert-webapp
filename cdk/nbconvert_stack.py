@@ -3,12 +3,15 @@ from aws_cdk import (
     Stack,
     aws_lambda as _lambda,
     aws_certificatemanager as acm,
-    aws_apigateway as apigw,
+    aws_apigatewayv2 as apigw2,
+    aws_apigatewayv2_integrations as apigw2_integrations,
+    aws_apigatewayv2_authorizers as apigw2_authorizers,
     aws_iam as iam,
     CfnOutput
 )
 from constructs import Construct
 
+SYNAPSE_OAUTH_CLIENT_ID = "0"
 
 class NBConvertLambdaCdkStack(Stack):
 
@@ -28,7 +31,8 @@ class NBConvertLambdaCdkStack(Stack):
             cert_arn = DEV_CERT_ARN
 
         self.lambda_fct = self.build_lambda_func(fct_stack=fct_stack)
-        self.setup_api_gateway = self.setup_api_gateway(lambda_function=self.lambda_fct,
+        self.setup_api_gateway = self.setup_api_gateway(fct_stack=fct_stack,
+                                                        lambda_function=self.lambda_fct,
                                                         domain_name=f"{domain_prefix}synapse.org",
                                                         cert_arn=cert_arn,
                                                         base_path="nbconvert")
@@ -37,13 +41,8 @@ class NBConvertLambdaCdkStack(Stack):
         return _lambda.DockerImageFunction(
             scope=self,
             id=f"{fct_stack}-nbconvert-lambda",
-            # Function name on AWS
             function_name=f"{fct_stack}-nbconvert-lambda",
-            # Use aws_cdk.aws_lambda.DockerImageCode.from_image_asset to build
-            # a docker image on deployment
             code=_lambda.DockerImageCode.from_image_asset(
-                # Directory relative to where you execute cdk deploy
-                # contains a Dockerfile with build instructions
                 directory="./nbconvert"
             ),
             timeout=Duration.seconds(120)
@@ -51,45 +50,64 @@ class NBConvertLambdaCdkStack(Stack):
 
     def setup_api_gateway(
         self,
+        fct_stack: str,
         lambda_function: _lambda.DockerImageFunction,
         domain_name: str,
         cert_arn: str,
-        base_path: str) -> apigw.RestApi:
+        base_path: str) -> apigw2.HttpApi:
+
         certificate = acm.Certificate.from_certificate_arn(
             self,
-            "CustomDomainCert",
-            cert_arn
+            id="CustomDomainCert",
+            certificate_arn=cert_arn
         )
 
-        domain_name_opts = apigw.DomainNameOptions(
+        allowed_origins = ["https://dev.synapse.org"]
+        if fct_stack == 'prod':
+            allowed_origins = ["https://www.synapse.org", "https://synapse.org", "https://staging.synapse.org", "https://tst.synapse.org"]
+
+        api = apigw2.HttpApi(
+            self,
+            id="NBConvertApiGateway",
+            api_name="NBConvertAPI",
+            cors_preflight={
+                "allow_origins": allowed_origins,
+                "allow_methods": [apigw2.CorsHttpMethod.GET],
+                "allow_headers": ["*"]
+            }
+        )
+
+        jwt_auth = apigw2_authorizers.HttpJwtAuthorizer(
+            id="NBConvertJwtAuthorizer",
+            jwt_issuer=f"https://repo-prod.{fct_stack}.sagebase.org/auth/v1",
+            jwt_audience=[SYNAPSE_OAUTH_CLIENT_ID],
+        )
+
+        lambda_integration = apigw2_integrations.HttpLambdaIntegration(
+            id="LambdaIntegration",
+            handler=lambda_function
+        )
+
+        api.add_routes(
+            path=f"/{base_path}",
+            methods=[apigw2.HttpMethod.GET],
+            integration=lambda_integration,
+            authorizer=jwt_auth
+        )
+
+        domain_name = apigw2.DomainName(
+            self,
+            id="CustomDomain",
             domain_name=domain_name,
             certificate=certificate,
         )
 
-        resource_policy = iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            principals=[iam.AnyPrincipal()],  # Public Access
-            actions=["execute-api:Invoke"],
-            resources=["*"]  # Allow all stages/methods
-        )
-
-        api = apigw.RestApi(
+        apigw2.ApiMapping(
             self,
-            "NBConvertApiGateway",
-            rest_api_name="NBConvertAPI",
-            domain_name=domain_name_opts,
-            policy=iam.PolicyDocument(statements=[resource_policy]),
-        )
-
-        lambda_integration = apigw.LambdaIntegration(lambda_function)
-
-        resource = api.root.add_resource(base_path)
-        resource.add_method("GET", lambda_integration, authorization_type=apigw.AuthorizationType.NONE)
-
-        lambda_function.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=self.format_arn(service="execute-api", resource=api.rest_api_id, resource_name=f"*/*/{base_path}")
+            id="ApiMapping",
+            api=api,
+            domain_name=domain_name,
+            stage=api.default_stage
         )
 
         CfnOutput(self, "ApiGatewayURL", value=api.url)
