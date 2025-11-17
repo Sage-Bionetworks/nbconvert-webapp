@@ -108,8 +108,8 @@ class NBConvertLambdaCdkStack(Stack):
             api=api,
             domain_name=domain_name,
             stage=api.default_stage
-        )        
-	
+        )
+
         CfnOutput(self, "ApiGatewayURL", value=api.url)
 
         return api
