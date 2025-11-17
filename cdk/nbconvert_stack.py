@@ -62,7 +62,7 @@ class NBConvertLambdaCdkStack(Stack):
             certificate_arn=cert_arn
         )
 
-        allowed_origins = ["*"]
+        allowed_origins = ["https://dev.synapse.org"]
         if fct_stack == 'prod':
             allowed_origins = ["https://www.synapse.org", "https://synapse.org", "https://staging.synapse.org", "https://tst.synapse.org"]
 
