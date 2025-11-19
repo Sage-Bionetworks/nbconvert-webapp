@@ -6,7 +6,7 @@ from aws_cdk import (
     aws_apigatewayv2 as apigw2,
     aws_apigatewayv2_integrations as apigw2_integrations,
     aws_apigatewayv2_authorizers as apigw2_authorizers,
-    aws_logs as logs,aws_iam as iam,
+    aws_logs as logs,
     CfnOutput
 )
 from constructs import Construct
