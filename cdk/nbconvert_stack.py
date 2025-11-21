@@ -57,7 +57,7 @@ class NBConvertLambdaCdkStack(Stack):
         base_path: str) -> apigw2.HttpApi:
 
         log_group = logs.LogGroup(
-            self, "HttpApiAccessLogs",
+            self, "NBConvertApiAccessLogs",
             retention=logs.RetentionDays.ONE_WEEK,
         )
 
