@@ -6,7 +6,7 @@ from aws_cdk import (
     aws_apigatewayv2 as apigw2,
     aws_apigatewayv2_integrations as apigw2_integrations,
     aws_apigatewayv2_authorizers as apigw2_authorizers,
-    aws_iam as iam,
+    aws_logs as logs,
     CfnOutput
 )
 from constructs import Construct
@@ -55,6 +55,11 @@ class NBConvertLambdaCdkStack(Stack):
         domain_name: str,
         cert_arn: str,
         base_path: str) -> apigw2.HttpApi:
+
+        log_group = logs.LogGroup(
+            self, "NBConvertApiAccessLogs",
+            retention=logs.RetentionDays.ONE_WEEK,
+        )
 
         certificate = acm.Certificate.from_certificate_arn(
             self,
@@ -109,6 +114,19 @@ class NBConvertLambdaCdkStack(Stack):
             domain_name=domain_name,
             stage=api.default_stage
         )
+
+        # API Gateway V2 requires the Log Group ARN without the ':*' suffix
+        access_log_arn = f"arn:aws:logs:{self.region}:{self.account}:log-group:{log_group.log_group_name}"
+
+        api.default_stage.node.default_child.access_log_settings = {
+            "destinationArn": access_log_arn,
+            "format": (
+                '{"requestId":"$context.requestId", "ip":"$context.identity.sourceIp", '
+                '"httpMethod":"$context.httpMethod", "path":"$context.path", '
+                '"status":"$context.status", "protocol":"$context.protocol", '
+                '"responseLength":"$context.responseLength"}'
+            )
+        }
 
         CfnOutput(self, "ApiGatewayURL", value=api.url)
 
