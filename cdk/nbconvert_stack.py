@@ -7,7 +7,11 @@ from aws_cdk import (
     aws_apigatewayv2_integrations as apigw2_integrations,
     aws_apigatewayv2_authorizers as apigw2_authorizers,
     aws_logs as logs,
-    CfnOutput
+    aws_cloudwatch as cloudwatch,
+    aws_cloudwatch_actions as cw_actions,
+    aws_sns as sns,
+    CfnOutput,
+    Fn
 )
 from constructs import Construct
 
@@ -36,6 +40,7 @@ class NBConvertLambdaCdkStack(Stack):
                                                         domain_name=f"{domain_prefix}synapse.org",
                                                         cert_arn=cert_arn,
                                                         base_path="nbconvert")
+        self.setup_alarms(fct_stack=fct_stack, lambda_function=self.lambda_fct)
 
     def build_lambda_func(self, fct_stack:str ) -> _lambda.DockerImageFunction:
         return _lambda.DockerImageFunction(
@@ -47,6 +52,31 @@ class NBConvertLambdaCdkStack(Stack):
             ),
             timeout=Duration.seconds(120)
         )
+
+    def setup_alarms(self, fct_stack: str, lambda_function: _lambda.DockerImageFunction) -> None:
+        notification_topic = sns.Topic.from_topic_arn(
+            self,
+            id="NotificationTopic",
+            topic_arn=Fn.import_value(f"us-east-1-synapse-{fct_stack}-global-resources-NotificationTopic")
+        )
+
+        # Traffic is sparse, so most periods have no datapoints; treat those as OK
+        errors_alarm = cloudwatch.Alarm(
+            self,
+            id="NBConvertLambdaErrorsAlarm",
+            alarm_name=f"{fct_stack}-nbconvert-lambda-errors",
+            alarm_description=f"{fct_stack}-nbconvert-lambda reported one or more execution errors",
+            metric=lambda_function.metric_errors(
+                period=Duration.minutes(5),
+                statistic=cloudwatch.Stats.SUM
+            ),
+            threshold=1,
+            evaluation_periods=1,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
+        )
+        errors_alarm.add_alarm_action(cw_actions.SnsAction(notification_topic))
+        errors_alarm.add_ok_action(cw_actions.SnsAction(notification_topic))
 
     def setup_api_gateway(
         self,
